@@ -1,0 +1,25 @@
+modmap:
+  - name: Global
+    remap:
+      CapsLock: F13
+
+      e: f
+      r: p
+      t: g
+      y: j
+      u: l
+      i: u
+      o: y
+      p: KEY_SEMICOLON
+
+      s: r
+      d: s
+      f: t
+      g: d
+      j: n
+      k: e
+      l: i
+      KEY_SEMICOLON: o
+      n: k
+    application: # wmctrl -x -l
+      not: steam_app_2231380.steam_app_2231380 # Ghost Recon Breakpoint
