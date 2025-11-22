@@ -1,8 +1,9 @@
 modmap:
-  - name: Global
+  - name: PushToTalk
     remap:
       CapsLock: F13
-
+  - name: Global
+    remap:
       e: f
       r: p
       t: g
@@ -21,5 +22,5 @@ modmap:
       l: i
       KEY_SEMICOLON: o
       n: k
-    application: # wmctrl -x -l
+    application: # "wmctrl -x -l" on X11 or "niri msg windows" on Niri
       not: steam_app_2231380.steam_app_2231380 # Ghost Recon Breakpoint
