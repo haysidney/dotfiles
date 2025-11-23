@@ -2,7 +2,7 @@ modmap:
   - name: PushToTalk
     remap:
       CapsLock: F13
-      KEY_INSERT: F13
+      KEY_INSERT: PROG1
   - name: Global
     remap:
       e: f
