@@ -278,7 +278,7 @@ spawn-sh-at-startup "sleep 5 && ~/.bin/push-to-talk -v -k KEY_F13 -n XF86Launch1
 
 hotkey-overlay {
     // Uncomment this line to disable the "Important Hotkeys" pop-up at startup.
-    // skip-at-startup
+    skip-at-startup
 }
 
 // Uncomment this line to ask the clients to omit their client-side decorations if possible.
