@@ -1,0 +1,18 @@
+{
+  "modules-right": ["clock", "tray"],
+  "modules-left": [],
+  "modules-center": [],
+  "font": "sans 10",
+  "exclusive": false,
+  "layer": "top",
+  "colors": {
+    "background": "#000000",
+    "foreground": "#ffffff"
+  },
+  "clock": {
+  	"format": "{:%A %B %d, %Y - %I:%M %p}"
+  },
+  "tray": {
+    "icon-size": 24
+  },
+}

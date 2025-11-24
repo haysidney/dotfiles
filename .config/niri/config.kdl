@@ -268,7 +268,7 @@ layout {
 // See the binds section below for more spawn examples.
 
 // This line starts waybar, a commonly used bar for Wayland compositors.
-// spawn-at-startup "waybar"
+spawn-at-startup "waybar"
 
 spawn-sh-at-startup "/usr/bin/xremap --watch=config --watch=device --device \"SteelSeries SteelSeries Apex 3 TKL\" /home/sidney/.config/xremap/config.yml &"
 spawn-sh-at-startup "sleep 5 && ~/.bin/push-to-talk -v -k KEY_F13 -n XF86Launch1 $(~/.bin/get_xremap.sh) &"
@@ -388,6 +388,7 @@ binds {
     Mod+Shift+Slash { show-hotkey-overlay; }
 
     // Suggested binds for running programs: terminal, app launcher, screen locker.
+    Mod+Space hotkey-overlay-title="Toggle bar: waybar" repeat=false { spawn "~/.bin/toggle_waybar.sh"; }
     Mod+T hotkey-overlay-title="Open a Terminal: xfce4-terminal" { spawn "xfce4-terminal"; }
     Mod+A hotkey-overlay-title="Run an Application: rofi" { spawn "rofi" "-show" "drun"; }
     Mod+F { spawn "thunar"; }
