@@ -401,6 +401,8 @@ binds {
     Mod+T hotkey-overlay-title="Open a Terminal: foot" { spawn "foot"; }
     Mod+A hotkey-overlay-title="Run an Application: rofi" { spawn "rofi" "-show" "drun"; }
     Mod+F { spawn "thunar"; }
+    //Mod+Shift+S { spawn "flameshot" "gui"; }
+    Mod+Shift+S { screenshot; }
     XF86AudioPlay { spawn "pavucontrol"; }
 
     // Mod+T hotkey-overlay-title="Open a Terminal: alacritty" { spawn "alacritty"; }
