@@ -272,6 +272,7 @@ layout {
 
 spawn-sh-at-startup "/usr/bin/xremap --watch=config --watch=device --device \"SteelSeries SteelSeries Apex 3 TKL\" /home/sidney/.config/xremap/config.yml &"
 spawn-sh-at-startup "sleep 5 && ~/.bin/push-to-talk -v -k KEY_F13 -n XF86Launch1 $(~/.bin/get_xremap.sh) &"
+spawn-sh-at-startup "waypaper --restore"
 
 // To run a shell command (with variables, pipes, etc.), use spawn-sh-at-startup:
 // spawn-sh-at-startup "qs -c ~/source/qs/MyAwesomeShell"
@@ -360,6 +361,14 @@ window-rule {
 }
 window-rule {
 	match app-id="mousepad"
+	open-floating true
+}
+window-rule {
+	match app-id="waypaper"
+	open-floating true
+}
+window-rule {
+	match title="File Operation Progress"
 	open-floating true
 }
 
