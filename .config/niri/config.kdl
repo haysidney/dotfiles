@@ -654,3 +654,7 @@ environment {
     ELECTRON_OZONE_PLATFORM_HINT "auto"
     PROTON_ENABLE_WAYLAND "1"
 }
+
+clipboard {
+	disable-primary
+}
