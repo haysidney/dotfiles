@@ -1,13 +1,22 @@
 {
-  "modules-right": ["clock", "tray"],
+  "modules-right": ["clock#Aussie", "clock#Pacific", "clock", "tray"],
   "modules-left": [],
   "modules-center": [],
   "font": "sans 10",
   "exclusive": false,
   "layer": "top",
+  "passthrough": true,
   "colors": {
     "background": "#000000",
     "foreground": "#ffffff"
+  },
+  "clock#Aussie": {
+    "timezone": "Australia/Brisbane",
+    "format": "{:%D - %I:%M %p (Australian Eastern)}"
+  },
+  "clock#Pacific": {
+    "timezone": "America/Los_Angeles",
+    "format": "{:%I:%M %p (Pacific)}"
   },
   "clock": {
   	"format": "{:%A %B %d, %Y - %I:%M %p}"
