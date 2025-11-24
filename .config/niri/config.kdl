@@ -398,7 +398,7 @@ binds {
 
     // Suggested binds for running programs: terminal, app launcher, screen locker.
     Mod+Space hotkey-overlay-title="Toggle bar: waybar" repeat=false { spawn "~/.bin/toggle_waybar.sh"; }
-    Mod+T hotkey-overlay-title="Open a Terminal: xfce4-terminal" { spawn "xfce4-terminal"; }
+    Mod+T hotkey-overlay-title="Open a Terminal: foot" { spawn "foot"; }
     Mod+A hotkey-overlay-title="Run an Application: rofi" { spawn "rofi" "-show" "drun"; }
     Mod+F { spawn "thunar"; }
     XF86AudioPlay { spawn "pavucontrol"; }
