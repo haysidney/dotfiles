@@ -18,9 +18,20 @@ fi
 # Put your fun stuff here.
 if [ "$TERM" != "linux" ]; then eval "$(zellij setup --generate-auto-start bash)"; fi
 
+export EDITOR=/usr/bin/micro
+
 export HISTSIZE=10000
 export HISTFILESIZE=20000
 export HISTCONTROL=ignoredups
 
 alias ls="ls -la"
 alias df="df -h"
+
+function y() {
+#	export TERM="xterm-kitty"
+	local tmp="$(mktemp -t "yazi-cwd.XXXXXX")" cwd
+	yazi "$@" --cwd-file="$tmp"
+	IFS= read -r -d '' cwd < "$tmp"
+	[ -n "$cwd" ] && [ "$cwd" != "$PWD" ] && builtin cd -- "$cwd"
+	rm -f -- "$tmp"
+}
