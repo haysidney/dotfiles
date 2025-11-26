@@ -360,6 +360,10 @@ window-rule {
 	open-fullscreen true
 }
 window-rule {
+	match app-id="discord"
+	open-fullscreen true
+}
+window-rule {
 	match app-id="steam"
 	open-fullscreen true
 }
