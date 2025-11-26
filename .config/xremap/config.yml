@@ -27,5 +27,6 @@ modmap:
       not: [
         steam_app_2231380.steam_app_2231380, # Ghost Recon Breakpoint X11
         grb_vulkan.exe, # Ghost Recon Breakpoint Niri
+        grb.exe, # Ghost Recon Breakpoint Niri
         helldivers2.exe, # Helldivers 2 Niri
       ]
