@@ -26,6 +26,7 @@ modmap:
     application: # "wmctrl -x -l" on X11 or "niri msg windows" on Niri
       not: [
         steam_app_2231380.steam_app_2231380, # Ghost Recon Breakpoint X11
+        steam_app_2231380, # Ghost Recon Breakpoint Niri
         grb_vulkan.exe, # Ghost Recon Breakpoint Niri
         grb.exe, # Ghost Recon Breakpoint Niri
         helldivers2.exe, # Helldivers 2 Niri
