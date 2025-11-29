@@ -361,20 +361,16 @@ window-rule {
     match app-id="steam" title=r#"^notificationtoasts_\d+_desktop$"#
     default-floating-position x=10 y=10 relative-to="bottom-right"
 }
+window-rule {
+	match app-id="steam" title="Steam"
+	open-maximized true
+}
 
 window-rule {
 	match app-id="com.discordapp.Discord"
-	open-fullscreen true
-}
-window-rule {
 	match app-id="discord"
-	open-fullscreen true
+	open-maximized true
 }
-window-rule {
-	match app-id="steam"
-	open-fullscreen true
-}
-
 window-rule {
 	match app-id="org.pulseaudio.pavucontrol"
 	open-floating true
@@ -391,8 +387,12 @@ window-rule {
 	match app-id="waypaper"
 	open-floating true
 }
-window-rule {
+window-rule { // Thunar file copy dialog
 	match title="File Operation Progress"
+	open-floating true
+}
+window-rule { // Thunar file rename dialog
+	match title="Rename \"*"
 	open-floating true
 }
 
