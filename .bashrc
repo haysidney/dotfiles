@@ -28,9 +28,9 @@ alias ls="ls -la"
 alias df="df -h"
 
 function y() {
-#	export TERM="xterm-kitty"
 	local tmp="$(mktemp -t "yazi-cwd.XXXXXX")" cwd
-	yazi "$@" --cwd-file="$tmp"
+	# Fix yazi image preview on zellij
+	TERM="xterm-kitty" yazi "$@" --cwd-file="$tmp"
 	IFS= read -r -d '' cwd < "$tmp"
 	[ -n "$cwd" ] && [ "$cwd" != "$PWD" ] && builtin cd -- "$cwd"
 	rm -f -- "$tmp"
