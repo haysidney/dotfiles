@@ -364,6 +364,7 @@ window-rule {
 window-rule {
 	match app-id="steam" title="Steam"
 	open-maximized true
+	open-fullscreen false
 }
 
 window-rule {
