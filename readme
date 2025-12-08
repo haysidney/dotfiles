@@ -1,3 +1,4 @@
 How to use:
 cd ~/.dotfiles
 stow -t ~ home
+sudo stow -t /etc etc
