@@ -23,6 +23,8 @@ modmap:
       l: i
       KEY_SEMICOLON: o
       n: k
+    #device:
+      #only: ['SteelSeries SteelSeries Apex 3 TKL', 'DualSense Wireless Controller']
     application: # "wmctrl -x -l" on X11 or "niri msg windows" on Niri
       not: [
         steam_app_2231380.steam_app_2231380, # Ghost Recon Breakpoint
