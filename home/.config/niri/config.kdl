@@ -314,7 +314,7 @@ layout {
 // This line starts waybar, a commonly used bar for Wayland compositors.
 spawn-at-startup "waybar"
 
-spawn-sh-at-startup "/usr/bin/xremap --watch=config --watch=device --device \"SteelSeries SteelSeries Apex 3 TKL\" /home/sidney/.config/xremap/config.yml &"
+spawn-sh-at-startup "/usr/bin/xremap --watch=config --watch=device --device \"SteelSeries SteelSeries Apex 3 TKL\" --device \"input-remapper keyboard\" /home/sidney/.config/xremap/config.yml &"
 spawn-sh-at-startup "sleep 5 && ~/.bin/push-to-talk -v -k KEY_F13 -n XF86Launch1 $(~/.bin/get_xremap.sh) &"
 spawn-sh-at-startup "waypaper --restore"
 
