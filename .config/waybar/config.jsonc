@@ -5,7 +5,7 @@
   "font": "sans 10",
   "exclusive": false,
   "layer": "top",
-  "passthrough": true,
+  "passthrough": false,
   "colors": {
     "background": "#000000",
     "foreground": "#ffffff"
