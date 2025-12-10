@@ -27,6 +27,10 @@ export HISTCONTROL=ignoredups
 alias ls="ls -la"
 alias df="df -h"
 
+alias startllama="systemctl --user start llama-server"
+alias stopllama="systemctl --user stop llama-server"
+
+
 function y() {
 	local tmp="$(mktemp -t "yazi-cwd.XXXXXX")" cwd
 	# Fix yazi image preview on zellij
