@@ -1,0 +1,21 @@
+[Unit]
+Description=Llama Server with Qwen3-14B-GGUF Model
+After=network.target
+
+[Service]
+# Command to start the server
+ExecStart=/usr/bin/llama-server \
+  -hf Qwen/Qwen3-14B-GGUF \
+  -c 30720 \
+  --host 0.0.0.0 \
+  --port 11434
+
+# Restart behavior (optional)
+Restart=always
+RestartSec=5
+
+# Optional: Add environment variables if needed
+#Environment="ENV_NAME=value"
+
+[Install]
+WantedBy=multi-user.target
