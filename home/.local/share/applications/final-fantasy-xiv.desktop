@@ -1,0 +1,7 @@
+[Desktop Entry]
+Name=Final Fantasy XIV
+Exec=/home/sidney/.bin/xwayland-satellite-run.sh flatpak run dev.goats.xivlauncher
+Type=Application
+Categories=Game;
+Terminal=false
+#Icon=/path/to/icon.png  # Optional: Replace with the actual icon path
