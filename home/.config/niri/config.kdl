@@ -412,6 +412,14 @@ window-rule {
 	open-maximized true
 }
 window-rule {
+	match app-id="XIVLauncher.Core"
+	open-maximized true
+}
+window-rule {
+	match app-id="ffxiv_dx11.exe"
+	open-maximized true
+}
+window-rule {
 	match app-id="org.pulseaudio.pavucontrol"
 	open-floating true
 }
