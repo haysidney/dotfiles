@@ -465,7 +465,7 @@ binds {
     Mod+A hotkey-overlay-title="Run an Application: rofi" { spawn "rofi" "-show" "drun"; }
     Mod+F { spawn "thunar"; }
     //Mod+Shift+S { spawn "flameshot" "gui"; }
-    Mod+Shift+S { screenshot; }
+    Mod+Shift+S { screenshot show-pointer=false; }
     XF86AudioPlay { spawn "pavucontrol"; }
 
     // Mod+T hotkey-overlay-title="Open a Terminal: alacritty" { spawn "alacritty"; }
