@@ -1,0 +1,8 @@
+These are notes for how I fixed various quirks which couldn't be addressed by simply adding something to stow.
+
+----- FFXIV Reshade -----
+As of Reshade 6.5 it changes how it interacts with d3dcompiler_47.dll in some way. I don't know the details, but it fails to compile shaders or it takes FOREVER.
+
+To fix this I had a friend send me their d3dcompiler_47.dll and I put it in the .xlcore wineprefix's system32.
+
+I imagine one could also run winetricks on the prefix to get the dll as well.
