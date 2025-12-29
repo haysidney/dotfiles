@@ -406,6 +406,8 @@ window-rule {
 	open-fullscreen false
 }
 
+// ----- Maximized -----
+
 window-rule {
 	match app-id="com.discordapp.Discord"
 	match app-id="discord"
@@ -419,6 +421,13 @@ window-rule {
 	match app-id="ffxiv_dx11.exe"
 	open-maximized true
 }
+window-rule {
+	match app-id="steam_app_553850" title="HELLDIVERS 2"
+	open-maximized true
+}
+
+// ----- Floating -----
+
 window-rule {
 	match app-id="org.pulseaudio.pavucontrol"
 	open-floating true
