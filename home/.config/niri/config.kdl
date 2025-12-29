@@ -117,7 +117,7 @@ output "HDMI-A-2" {
     position x=0 y=0
 }
 
-output "DP-2" {
+output "HDMI-A-1" {
     // Uncomment this line to disable this output.
     // off
 
