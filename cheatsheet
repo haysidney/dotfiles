@@ -1,0 +1,15 @@
+Commands I forget sometimes because my brain is smol.
+
+--Check dependencies of atom--
+emerge -pcv llvm-core/libclc
+
+--Check selected packages--
+eix -c --selected-file
+or
+emerge --pretend --quiet --emptytree --nodeps @selected
+
+--Select package without rebuilding--
+emerge --noreplace x11-misc/rofi
+
+--Deselect package without unmerging--
+emerge --deselect x11-misc/rofi
