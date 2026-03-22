@@ -29,6 +29,7 @@ alias df="df -h"
 
 alias startllama="systemctl --user start llama-server"
 alias stopllama="systemctl --user stop llama-server"
+alias startniri="sudo systemctl stop input-remapper; systemctl --user stop xremap; sudo killall xremap; niri-session"
 
 
 function y() {
