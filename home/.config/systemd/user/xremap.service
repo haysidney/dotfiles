@@ -1,0 +1,18 @@
+[Unit]
+Description=Xremap
+After=graphical-session.target
+Requisite=graphical-session.target
+
+[Service]
+ExecStart=
+ExecStart=/usr/bin/xremap --watch=config --watch=device --device "SteelSeries SteelSeries Apex 3 TKL" --device "input-remapper keyboard" %h/.config/xremap/config.yml
+Restart=always
+StandardOutput=journal
+StandardError=journal
+
+MemoryHigh=8M
+MemoryMax=16M
+IPAddressDeny=any
+
+[Install]
+WantedBy=
