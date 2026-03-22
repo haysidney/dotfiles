@@ -23,6 +23,7 @@ modmap:
       l: i
       KEY_SEMICOLON: o
       n: k
+    mode: Colemak_On
     #device:
       #only: ['SteelSeries SteelSeries Apex 3 TKL', 'DualSense Wireless Controller']
     application: # "wmctrl -x -l" on X11 or "niri msg windows" on Niri
@@ -39,3 +40,12 @@ modmap:
         steam_app_275850, # No Man's Sky
         steam_app_2246340, # Monster Hunter Wilds
       ]
+
+keymap:
+  - name: SetMode
+    remap:
+      CTRL-ALT-SHIFT-SUPER-BACKSPACE: { set_mode: Colemak_Off }
+      CTRL-ALT-SHIFT-SUPER-BACKSLASH: { set_mode: Colemak_On }
+    mode: [Colemak_On, Colemak_Off]
+
+default_mode: Colemak_On
