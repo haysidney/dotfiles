@@ -39,6 +39,8 @@ modmap:
         steam_app_359320.steam_app_359320, # Elite Dangerous
         steam_app_275850, # No Man's Sky
         steam_app_2246340, # Monster Hunter Wilds
+        factorio, # Factorio
+        gamescope, # Gamescope
       ]
 
 keymap:
