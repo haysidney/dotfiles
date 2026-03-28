@@ -41,6 +41,7 @@ modmap:
         steam_app_2246340, # Monster Hunter Wilds
         factorio, # Factorio
         gamescope, # Gamescope
+        steam_app_3949040, # RV There Yet
       ]
 
 keymap:
