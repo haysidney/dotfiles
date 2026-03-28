@@ -29,6 +29,7 @@ alias df="df -h"
 
 alias startllama="systemctl --user start llama-server"
 alias stopllama="systemctl --user stop llama-server"
+alias upgrademyshit="sudo emerge --sync && sudo emerge --ask --verbose --update --deep --newuse @world; flatpak update; sudo emerge --depclean"
 
 
 function y() {
