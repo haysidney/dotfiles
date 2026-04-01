@@ -1,0 +1,432 @@
+From 8c416ed32d275d3c252dce5555002202d7c3e0aa Mon Sep 17 00:00:00 2001
+From: Sidney Hays <me@sidneyhays.com>
+Date: Tue, 31 Mar 2026 20:32:42 -0400
+Subject: [PATCH 1/4] window-rule: add disable-offscreen-frame-throttle option
+
+Adds a new window rule property that disables the ~1fps frame callback
+throttle applied to offscreen/invisible windows, allowing specific
+windows to render at full rate even when not on screen.
+
+Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
+---
+ niri-config/src/window_rule.rs |  2 ++
+ src/niri.rs                    | 63 +++++++++++++++++++++++++++++++---
+ src/window/mod.rs              |  6 ++++
+ 3 files changed, 67 insertions(+), 4 deletions(-)
+
+diff --git a/niri-config/src/window_rule.rs b/niri-config/src/window_rule.rs
+index 0465d28f..b72175c3 100644
+--- a/niri-config/src/window_rule.rs
++++ b/niri-config/src/window_rule.rs
+@@ -72,6 +72,8 @@ pub struct WindowRule {
+     pub scroll_factor: Option<FloatOrInt<0, 100>>,
+     #[knuffel(child, unwrap(argument))]
+     pub tiled_state: Option<bool>,
++    #[knuffel(child, unwrap(argument))]
++    pub disable_offscreen_frame_throttle: Option<bool>,
+ }
+ 
+ #[derive(knuffel::Decode, Debug, Default, Clone, PartialEq)]
+diff --git a/src/niri.rs b/src/niri.rs
+index e59de48b..265bb0fb 100644
+--- a/src/niri.rs
++++ b/src/niri.rs
+@@ -2058,8 +2058,9 @@ impl State {
+                 }
+             }
+             CastTarget::Window { id } => {
++                let id = *id;
+                 let mut windows = self.niri.layout.windows();
+-                let Some((_, mapped)) = windows.find(|(_, mapped)| mapped.id().get() == *id) else {
++                let Some((_, mapped)) = windows.find(|(_, mapped)| mapped.id().get() == id) else {
+                     return;
+                 };
+ 
+@@ -2075,6 +2076,10 @@ impl State {
+                     .bbox_with_popups()
+                     .to_physical_precise_up(scale);
+ 
++                // Save info needed after mapped/output borrows are released.
++                let disable_throttle = mapped.rules().disable_offscreen_frame_throttle;
++                let output_clone = output.clone();
++
+                 match cast.ensure_size(bbox.size) {
+                     Ok(CastSizeChange::Ready) => (),
+                     Ok(CastSizeChange::Pending) => return,
+@@ -2087,17 +2092,41 @@ impl State {
+                     }
+                 }
+ 
+-                self.backend.with_primary_renderer(|renderer| {
++                let frame_rendered = self.backend.with_primary_renderer(|renderer| {
+                     // FIXME: pointer.
+                     let elements = mapped
+                         .render_for_screen_cast(renderer, scale)
+                         .rev()
+                         .collect::<Vec<_>>();
+ 
+-                    if cast.dequeue_buffer_and_render(renderer, &elements, bbox.size, scale) {
++                    let rendered =
++                        cast.dequeue_buffer_and_render(renderer, &elements, bbox.size, scale);
++                    if rendered {
+                         cast.last_frame_time = get_monotonic_time();
+                     }
+-                });
++                    rendered
++                }).unwrap_or(false);
++
++                // Release the immutable layout borrow so with_windows_mut can proceed.
++                drop(windows);
++
++                // For windows with disable_offscreen_frame_throttle, send a frame callback
++                // after each cast frame to drive rendering at cast rate rather than ~1fps.
++                if frame_rendered && disable_throttle {
++                    let frame_callback_time = get_monotonic_time();
++                    self.niri.layout.with_windows_mut(|mapped, _| {
++                        if mapped.id().get() == id
++                            && mapped.rules().disable_offscreen_frame_throttle
++                        {
++                            mapped.send_frame(
++                                &output_clone,
++                                frame_callback_time,
++                                Some(Duration::ZERO),
++                                |_, _| None,
++                            );
++                        }
++                    });
++                }
+             }
+         }
+     }
+@@ -5271,6 +5300,7 @@ impl Niri {
+         let scale = Scale::from(output.current_scale().fractional_scale());
+ 
+         let mut casts_to_stop = vec![];
++        let mut throttle_callbacks: Vec<u64> = vec![];
+ 
+         let mut casts = mem::take(&mut self.casts);
+         for cast in &mut casts {
+@@ -5292,6 +5322,8 @@ impl Niri {
+                 .bbox_with_popups()
+                 .to_physical_precise_up(scale);
+ 
++            let disable_throttle = mapped.rules().disable_offscreen_frame_throttle;
++
+             match cast.ensure_size(bbox.size) {
+                 Ok(CastSizeChange::Ready) => (),
+                 Ok(CastSizeChange::Pending) => continue,
+@@ -5310,10 +5342,33 @@ impl Niri {
+ 
+             if cast.dequeue_buffer_and_render(renderer, &elements, bbox.size, scale) {
+                 cast.last_frame_time = target_presentation_time;
++                if disable_throttle {
++                    throttle_callbacks.push(id);
++                }
+             }
+         }
+         self.casts = casts;
+ 
++        // For windows with disable_offscreen_frame_throttle, send a frame callback after each
++        // cast frame to drive rendering at cast rate rather than the ~1fps fallback rate.
++        if !throttle_callbacks.is_empty() {
++            let frame_callback_time = get_monotonic_time();
++            for id in throttle_callbacks {
++                self.layout.with_windows_mut(|mapped, _| {
++                    if mapped.id().get() == id
++                        && mapped.rules().disable_offscreen_frame_throttle
++                    {
++                        mapped.send_frame(
++                            output,
++                            frame_callback_time,
++                            Some(Duration::ZERO),
++                            |_, _| None,
++                        );
++                    }
++                });
++            }
++        }
++
+         for id in casts_to_stop {
+             self.stop_cast(id);
+         }
+diff --git a/src/window/mod.rs b/src/window/mod.rs
+index c8c358f1..cd458225 100644
+--- a/src/window/mod.rs
++++ b/src/window/mod.rs
+@@ -119,6 +119,9 @@ pub struct ResolvedWindowRules {
+ 
+     /// Override whether to set the Tiled xdg-toplevel state on the window.
+     pub tiled_state: Option<bool>,
++
++    /// Whether to disable the ~1fps frame callback throttle for offscreen windows.
++    pub disable_offscreen_frame_throttle: bool,
+ }
+ 
+ impl<'a> WindowRef<'a> {
+@@ -296,6 +299,9 @@ impl ResolvedWindowRules {
+                 if let Some(x) = rule.tiled_state {
+                     resolved.tiled_state = Some(x);
+                 }
++                if let Some(x) = rule.disable_offscreen_frame_throttle {
++                    resolved.disable_offscreen_frame_throttle |= x;
++                }
+             }
+ 
+             resolved.open_on_output = open_on_output.map(|x| x.to_owned());
+-- 
+2.52.0
+
+
+From 96fff9e27f9fed0dd36bda4b2d60d64600ad643f Mon Sep 17 00:00:00 2001
+From: Sidney Hays <me@sidneyhays.com>
+Date: Tue, 31 Mar 2026 22:03:59 -0400
+Subject: [PATCH 2/4] window-rule: extend disable-offscreen-frame-throttle to
+ all windows
+
+Previously, disable_offscreen_frame_throttle only applied to windows
+being screen cast. Now it also applies to the ~1fps fallback timer for
+any offscreen window, allowing specific windows to render at full rate
+even when not on screen.
+
+Co-Authored-By: Claude Haiku 4.5 <noreply@anthropic.com>
+---
+ CLAUDE.md   | 38 ++++++++++++++++++++++++++++++++++++++
+ notes.txt   | 22 ++++++++++++++++++++++
+ src/niri.rs |  7 ++++++-
+ 3 files changed, 66 insertions(+), 1 deletion(-)
+ create mode 100644 CLAUDE.md
+ create mode 100644 notes.txt
+
+diff --git a/CLAUDE.md b/CLAUDE.md
+new file mode 100644
+index 00000000..cd351791
+--- /dev/null
++++ b/CLAUDE.md
+@@ -0,0 +1,38 @@
++## Rule: always use qmd before reading files
++
++Before reading files or exploring directories, always use qmd to search for information in local projects.
++
++Available tools:
++
++- `qmd search "query"` — fast keyword search (BM25)
++
++- `qmd query "query"` — hybrid search with reranking (best quality)
++
++- `qmd vsearch "query"` — semantic vector search
++
++- `qmd get <file>` — retrieve a specific document
++
++Use qmd search for quick lookups and qmd query for complex questions.
++
++Use Read/Glob only if qmd doesn't return enough results.
++
++## After making code changes, update the index and regenerate embeddings:
++```bash
++qmd update
++qmd embed
++```
++
++## Gentoo packaging
++
++Changes are deployed to the system niri install via a Portage user patch.
++The patch is based on the `disable-offscreen-frame-throttle-v25.11` branch,
++which is rebased onto the `v25.11` tag to match `gui-wm/niri-25.11-r1`.
++
++After any changes to the v25.11 branch, remind the user to regenerate the patch and rebuild:
++
++```bash
++git -C ~/code/niri format-patch -1 disable-offscreen-frame-throttle-v25.11 --stdout | sudo tee /etc/portage/patches/gui-wm/niri/disable-offscreen-frame-throttle.patch
++sudo emerge -1 gui-wm/niri
++```
++
++The patch file lives at `/etc/portage/patches/gui-wm/niri/disable-offscreen-frame-throttle.patch`.
+diff --git a/notes.txt b/notes.txt
+new file mode 100644
+index 00000000..9349571c
+--- /dev/null
++++ b/notes.txt
+@@ -0,0 +1,22 @@
++QMD Collection Setup
++====================
++
++Created a QMD collection for this repo using:
++
++    qmd collection add /home/sidney/code/niri --name niri --mask '**/*.{rs,toml,md,yml,yaml}'
++
++This indexes 224 files (Rust source, TOML configs, Markdown docs, and YAML files).
++
++The --mask flag sets the glob pattern (undocumented in the help text; found by inspecting the source).
++Default pattern is **/*.md — use --mask to override.
++
++To enable semantic/vector search, run:
++
++    qmd embed
++
++Useful search commands:
++
++    qmd search "keyword"              # fast BM25 keyword search
++    qmd query "natural language"      # hybrid search with reranking (best quality)
++    qmd vsearch "concept"             # vector/semantic search only
++    qmd search "something" -c niri    # scope to this collection
+diff --git a/src/niri.rs b/src/niri.rs
+index 265bb0fb..e64123de 100644
+--- a/src/niri.rs
++++ b/src/niri.rs
+@@ -5116,10 +5116,15 @@ impl Niri {
+         let frame_callback_time = get_monotonic_time();
+ 
+         self.layout.with_windows_mut(|mapped, _| {
++            let throttle = if mapped.rules().disable_offscreen_frame_throttle {
++                Some(Duration::ZERO)
++            } else {
++                FRAME_CALLBACK_THROTTLE
++            };
+             mapped.send_frame(
+                 output,
+                 frame_callback_time,
+-                FRAME_CALLBACK_THROTTLE,
++                throttle,
+                 |_, _| None,
+             );
+         });
+-- 
+2.52.0
+
+
+From faeb541077a374e95ee5ac57bf778928e410ed86 Mon Sep 17 00:00:00 2001
+From: Sidney Hays <me@sidneyhays.com>
+Date: Tue, 31 Mar 2026 22:09:55 -0400
+Subject: [PATCH 3/4] window-rule: extend disable-offscreen-frame-throttle to
+ all windows
+
+Previously, disable_offscreen_frame_throttle only applied to windows
+being screen cast. Now it also applies to regular rendering: offscreen
+windows with this flag will receive frame callbacks at the monitor
+refresh rate instead of the ~1fps fallback timer rate, allowing them
+to render at the display refresh rate.
+
+Co-Authored-By: Claude Haiku 4.5 <noreply@anthropic.com>
+---
+ CLAUDE.md   |  6 ++++--
+ src/niri.rs | 27 +++++++++++++++++++++++++++
+ 2 files changed, 31 insertions(+), 2 deletions(-)
+
+diff --git a/CLAUDE.md b/CLAUDE.md
+index cd351791..3200577f 100644
+--- a/CLAUDE.md
++++ b/CLAUDE.md
+@@ -28,10 +28,12 @@ Changes are deployed to the system niri install via a Portage user patch.
+ The patch is based on the `disable-offscreen-frame-throttle-v25.11` branch,
+ which is rebased onto the `v25.11` tag to match `gui-wm/niri-25.11-r1`.
+ 
+-After any changes to the v25.11 branch, remind the user to regenerate the patch and rebuild:
++After any changes to the v25.11 branch, remind the user to regenerate the patch and rebuild.
++**Important:** Check the number of commits on the branch and use the correct `-N` value in format-patch.
++For example, if there are 2 commits, use `-2` instead of `-1`.
+ 
+ ```bash
+-git -C ~/code/niri format-patch -1 disable-offscreen-frame-throttle-v25.11 --stdout | sudo tee /etc/portage/patches/gui-wm/niri/disable-offscreen-frame-throttle.patch
++git -C ~/code/niri format-patch -N disable-offscreen-frame-throttle-v25.11 --stdout | sudo tee /etc/portage/patches/gui-wm/niri/disable-offscreen-frame-throttle.patch
+ sudo emerge -1 gui-wm/niri
+ ```
+ 
+diff --git a/src/niri.rs b/src/niri.rs
+index e64123de..9806ce49 100644
+--- a/src/niri.rs
++++ b/src/niri.rs
+@@ -5057,6 +5057,33 @@ impl Niri {
+             );
+         }
+ 
++        // Send frame callbacks to offscreen windows with disable_offscreen_frame_throttle
++        // so they can render at monitor refresh rate instead of the ~1fps fallback timer rate.
++        let mut offscreen_windows_to_notify = vec![];
++        self.layout.with_windows(|mapped, current_output, _, _| {
++            if mapped.rules().disable_offscreen_frame_throttle {
++                // Check if this window is on the current output
++                let on_current_output = current_output.as_ref().map(|o| &**o) == Some(output);
++                if !on_current_output {
++                    offscreen_windows_to_notify.push(mapped.id());
++                }
++            }
++        });
++
++        for id in offscreen_windows_to_notify {
++            self.layout.with_windows_mut(|mapped, _| {
++                if mapped.id() == id && mapped.rules().disable_offscreen_frame_throttle {
++                    // Send frame callback with zero throttle to allow rendering at monitor refresh rate
++                    mapped.send_frame(
++                        output,
++                        frame_callback_time,
++                        Some(Duration::ZERO),
++                        |_, _| Some(output.clone()),
++                    );
++                }
++            });
++        }
++
+         for surface in layer_map_for_output(output).layers() {
+             surface.send_frame(
+                 output,
+-- 
+2.52.0
+
+
+From eb1b2ae6f3ad2a91ecf259591f3ab871bbccd695 Mon Sep 17 00:00:00 2001
+From: Sidney Hays <me@sidneyhays.com>
+Date: Tue, 31 Mar 2026 23:00:42 -0400
+Subject: [PATCH 4/4] window-rule: fix disable-offscreen-frame-throttle for
+ non-visible windows
+
+The closure passed to send_frame should return Some(output) to force the
+callback to be sent, not None. Passing None relies on needs_frame_callback
+being set, which isn't true for invisible windows.
+
+Also correctly identify windows on the current output (not just those not
+on any output) to handle hidden workspaces and scroll positions.
+---
+ src/niri.rs | 20 ++++++++++----------
+ 1 file changed, 10 insertions(+), 10 deletions(-)
+
+diff --git a/src/niri.rs b/src/niri.rs
+index 9806ce49..a01a257e 100644
+--- a/src/niri.rs
++++ b/src/niri.rs
+@@ -5057,23 +5057,23 @@ impl Niri {
+             );
+         }
+ 
+-        // Send frame callbacks to offscreen windows with disable_offscreen_frame_throttle
+-        // so they can render at monitor refresh rate instead of the ~1fps fallback timer rate.
+-        let mut offscreen_windows_to_notify = vec![];
++        // Send frame callbacks at full refresh rate to windows with disable_offscreen_frame_throttle
++        // that are on this output, so they can render regardless of visibility (workspace, scroll, etc).
++        let mut windows_to_notify = vec![];
+         self.layout.with_windows(|mapped, current_output, _, _| {
+             if mapped.rules().disable_offscreen_frame_throttle {
+-                // Check if this window is on the current output
+-                let on_current_output = current_output.as_ref().map(|o| &**o) == Some(output);
+-                if !on_current_output {
+-                    offscreen_windows_to_notify.push(mapped.id());
++                if let Some(current_out) = current_output {
++                    if current_out == output {
++                        windows_to_notify.push(mapped.id());
++                    }
+                 }
+             }
+         });
+ 
+-        for id in offscreen_windows_to_notify {
++        for id in windows_to_notify {
+             self.layout.with_windows_mut(|mapped, _| {
+-                if mapped.id() == id && mapped.rules().disable_offscreen_frame_throttle {
+-                    // Send frame callback with zero throttle to allow rendering at monitor refresh rate
++                if mapped.id() == id {
++                    // Send frame callback with zero throttle, forcing it to be sent regardless of visibility
+                     mapped.send_frame(
+                         output,
+                         frame_callback_time,
+-- 
+2.52.0
+
