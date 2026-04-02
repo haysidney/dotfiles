@@ -1,7 +1,7 @@
 From 8c416ed32d275d3c252dce5555002202d7c3e0aa Mon Sep 17 00:00:00 2001
 From: Sidney Hays <me@sidneyhays.com>
 Date: Tue, 31 Mar 2026 20:32:42 -0400
-Subject: [PATCH 1/4] window-rule: add disable-offscreen-frame-throttle option
+Subject: [PATCH 1/6] window-rule: add disable-offscreen-frame-throttle option
 
 Adds a new window rule property that disables the ~1fps frame callback
 throttle applied to offscreen/invisible windows, allowing specific
@@ -180,7 +180,7 @@ index c8c358f1..cd458225 100644
 From 96fff9e27f9fed0dd36bda4b2d60d64600ad643f Mon Sep 17 00:00:00 2001
 From: Sidney Hays <me@sidneyhays.com>
 Date: Tue, 31 Mar 2026 22:03:59 -0400
-Subject: [PATCH 2/4] window-rule: extend disable-offscreen-frame-throttle to
+Subject: [PATCH 2/6] window-rule: extend disable-offscreen-frame-throttle to
  all windows
 
 Previously, disable_offscreen_frame_throttle only applied to windows
@@ -297,7 +297,7 @@ index 265bb0fb..e64123de 100644
 From faeb541077a374e95ee5ac57bf778928e410ed86 Mon Sep 17 00:00:00 2001
 From: Sidney Hays <me@sidneyhays.com>
 Date: Tue, 31 Mar 2026 22:09:55 -0400
-Subject: [PATCH 3/4] window-rule: extend disable-offscreen-frame-throttle to
+Subject: [PATCH 3/6] window-rule: extend disable-offscreen-frame-throttle to
  all windows
 
 Previously, disable_offscreen_frame_throttle only applied to windows
@@ -376,7 +376,7 @@ index e64123de..9806ce49 100644
 From eb1b2ae6f3ad2a91ecf259591f3ab871bbccd695 Mon Sep 17 00:00:00 2001
 From: Sidney Hays <me@sidneyhays.com>
 Date: Tue, 31 Mar 2026 23:00:42 -0400
-Subject: [PATCH 4/4] window-rule: fix disable-offscreen-frame-throttle for
+Subject: [PATCH 4/6] window-rule: fix disable-offscreen-frame-throttle for
  non-visible windows
 
 The closure passed to send_frame should return Some(output) to force the
@@ -427,6 +427,253 @@ index 9806ce49..a01a257e 100644
                      mapped.send_frame(
                          output,
                          frame_callback_time,
+-- 
+2.52.0
+
+
+From 49151ad77cfc94d19bc8f071cec64c0da3a90f3b Mon Sep 17 00:00:00 2001
+From: Sidney Hays <me@sidneyhays.com>
+Date: Wed, 1 Apr 2026 18:55:15 -0400
+Subject: [PATCH 5/6] window-rule: replace disable-offscreen-frame-throttle
+ with offscreen-frame-throttle-rate
+
+Replace the boolean disable-offscreen-frame-throttle option with
+offscreen-frame-throttle-rate, which takes a fps value. A rate of 0
+means unlimited (equivalent to the old disable behavior), and any
+positive value caps offscreen frame callbacks to that many fps.
+
+Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
+---
+ niri-config/src/window_rule.rs |  2 +-
+ src/niri.rs                    | 73 ++++++++++++++++------------------
+ src/window/mod.rs              | 13 ++++--
+ 3 files changed, 45 insertions(+), 43 deletions(-)
+
+diff --git a/niri-config/src/window_rule.rs b/niri-config/src/window_rule.rs
+index b72175c3..d85ecf70 100644
+--- a/niri-config/src/window_rule.rs
++++ b/niri-config/src/window_rule.rs
+@@ -73,7 +73,7 @@ pub struct WindowRule {
+     #[knuffel(child, unwrap(argument))]
+     pub tiled_state: Option<bool>,
+     #[knuffel(child, unwrap(argument))]
+-    pub disable_offscreen_frame_throttle: Option<bool>,
++    pub offscreen_frame_throttle_rate: Option<u32>,
+ }
+ 
+ #[derive(knuffel::Decode, Debug, Default, Clone, PartialEq)]
+diff --git a/src/niri.rs b/src/niri.rs
+index a01a257e..0220a085 100644
+--- a/src/niri.rs
++++ b/src/niri.rs
+@@ -2077,7 +2077,7 @@ impl State {
+                     .to_physical_precise_up(scale);
+ 
+                 // Save info needed after mapped/output borrows are released.
+-                let disable_throttle = mapped.rules().disable_offscreen_frame_throttle;
++                let offscreen_throttle = mapped.rules().offscreen_frame_throttle;
+                 let output_clone = output.clone();
+ 
+                 match cast.ensure_size(bbox.size) {
+@@ -2110,20 +2110,20 @@ impl State {
+                 // Release the immutable layout borrow so with_windows_mut can proceed.
+                 drop(windows);
+ 
+-                // For windows with disable_offscreen_frame_throttle, send a frame callback
++                // For windows with offscreen_frame_throttle_rate, send a frame callback
+                 // after each cast frame to drive rendering at cast rate rather than ~1fps.
+-                if frame_rendered && disable_throttle {
++                if frame_rendered && offscreen_throttle.is_some() {
+                     let frame_callback_time = get_monotonic_time();
+                     self.niri.layout.with_windows_mut(|mapped, _| {
+-                        if mapped.id().get() == id
+-                            && mapped.rules().disable_offscreen_frame_throttle
+-                        {
+-                            mapped.send_frame(
+-                                &output_clone,
+-                                frame_callback_time,
+-                                Some(Duration::ZERO),
+-                                |_, _| None,
+-                            );
++                        if mapped.id().get() == id {
++                            if let Some(throttle) = mapped.rules().offscreen_frame_throttle {
++                                mapped.send_frame(
++                                    &output_clone,
++                                    frame_callback_time,
++                                    Some(throttle),
++                                    |_, _| None,
++                                );
++                            }
+                         }
+                     });
+                 }
+@@ -5057,11 +5057,11 @@ impl Niri {
+             );
+         }
+ 
+-        // Send frame callbacks at full refresh rate to windows with disable_offscreen_frame_throttle
++        // Send frame callbacks at the configured rate to windows with offscreen_frame_throttle_rate
+         // that are on this output, so they can render regardless of visibility (workspace, scroll, etc).
+         let mut windows_to_notify = vec![];
+         self.layout.with_windows(|mapped, current_output, _, _| {
+-            if mapped.rules().disable_offscreen_frame_throttle {
++            if mapped.rules().offscreen_frame_throttle.is_some() {
+                 if let Some(current_out) = current_output {
+                     if current_out == output {
+                         windows_to_notify.push(mapped.id());
+@@ -5073,13 +5073,14 @@ impl Niri {
+         for id in windows_to_notify {
+             self.layout.with_windows_mut(|mapped, _| {
+                 if mapped.id() == id {
+-                    // Send frame callback with zero throttle, forcing it to be sent regardless of visibility
+-                    mapped.send_frame(
+-                        output,
+-                        frame_callback_time,
+-                        Some(Duration::ZERO),
+-                        |_, _| Some(output.clone()),
+-                    );
++                    if let Some(throttle) = mapped.rules().offscreen_frame_throttle {
++                        mapped.send_frame(
++                            output,
++                            frame_callback_time,
++                            Some(throttle),
++                            |_, _| Some(output.clone()),
++                        );
++                    }
+                 }
+             });
+         }
+@@ -5143,11 +5144,7 @@ impl Niri {
+         let frame_callback_time = get_monotonic_time();
+ 
+         self.layout.with_windows_mut(|mapped, _| {
+-            let throttle = if mapped.rules().disable_offscreen_frame_throttle {
+-                Some(Duration::ZERO)
+-            } else {
+-                FRAME_CALLBACK_THROTTLE
+-            };
++            let throttle = mapped.rules().offscreen_frame_throttle.map(Some).unwrap_or(FRAME_CALLBACK_THROTTLE);
+             mapped.send_frame(
+                 output,
+                 frame_callback_time,
+@@ -5354,7 +5351,7 @@ impl Niri {
+                 .bbox_with_popups()
+                 .to_physical_precise_up(scale);
+ 
+-            let disable_throttle = mapped.rules().disable_offscreen_frame_throttle;
++            let offscreen_throttle = mapped.rules().offscreen_frame_throttle;
+ 
+             match cast.ensure_size(bbox.size) {
+                 Ok(CastSizeChange::Ready) => (),
+@@ -5374,28 +5371,28 @@ impl Niri {
+ 
+             if cast.dequeue_buffer_and_render(renderer, &elements, bbox.size, scale) {
+                 cast.last_frame_time = target_presentation_time;
+-                if disable_throttle {
++                if offscreen_throttle.is_some() {
+                     throttle_callbacks.push(id);
+                 }
+             }
+         }
+         self.casts = casts;
+ 
+-        // For windows with disable_offscreen_frame_throttle, send a frame callback after each
++        // For windows with offscreen_frame_throttle_rate, send a frame callback after each
+         // cast frame to drive rendering at cast rate rather than the ~1fps fallback rate.
+         if !throttle_callbacks.is_empty() {
+             let frame_callback_time = get_monotonic_time();
+             for id in throttle_callbacks {
+                 self.layout.with_windows_mut(|mapped, _| {
+-                    if mapped.id().get() == id
+-                        && mapped.rules().disable_offscreen_frame_throttle
+-                    {
+-                        mapped.send_frame(
+-                            output,
+-                            frame_callback_time,
+-                            Some(Duration::ZERO),
+-                            |_, _| None,
+-                        );
++                    if mapped.id().get() == id {
++                        if let Some(throttle) = mapped.rules().offscreen_frame_throttle {
++                            mapped.send_frame(
++                                output,
++                                frame_callback_time,
++                                Some(throttle),
++                                |_, _| None,
++                            );
++                        }
+                     }
+                 });
+             }
+diff --git a/src/window/mod.rs b/src/window/mod.rs
+index cd458225..5df1030f 100644
+--- a/src/window/mod.rs
++++ b/src/window/mod.rs
+@@ -1,4 +1,5 @@
+ use std::cmp::{max, min};
++use std::time::Duration;
+ 
+ use niri_config::utils::MergeWith as _;
+ use niri_config::window_rule::{Match, WindowRule};
+@@ -120,8 +121,8 @@ pub struct ResolvedWindowRules {
+     /// Override whether to set the Tiled xdg-toplevel state on the window.
+     pub tiled_state: Option<bool>,
+ 
+-    /// Whether to disable the ~1fps frame callback throttle for offscreen windows.
+-    pub disable_offscreen_frame_throttle: bool,
++    /// Throttle duration for offscreen frame callbacks; None means use the default ~1fps throttle.
++    pub offscreen_frame_throttle: Option<Duration>,
+ }
+ 
+ impl<'a> WindowRef<'a> {
+@@ -299,8 +300,12 @@ impl ResolvedWindowRules {
+                 if let Some(x) = rule.tiled_state {
+                     resolved.tiled_state = Some(x);
+                 }
+-                if let Some(x) = rule.disable_offscreen_frame_throttle {
+-                    resolved.disable_offscreen_frame_throttle |= x;
++                if let Some(fps) = rule.offscreen_frame_throttle_rate {
++                    resolved.offscreen_frame_throttle = Some(if fps == 0 {
++                        Duration::ZERO
++                    } else {
++                        Duration::from_secs(1) / fps
++                    });
+                 }
+             }
+ 
+-- 
+2.52.0
+
+
+From 8197eaf81c83dcedd00359b1404232d4e224b442 Mon Sep 17 00:00:00 2001
+From: Sidney Hays <me@sidneyhays.com>
+Date: Wed, 1 Apr 2026 23:54:11 -0400
+Subject: [PATCH 6/6] window-rule: fix offscreen-frame-throttle-rate throttle
+ being ignored
+
+Pass |_, _| None as primary_scan_out_output in the offscreen throttle
+send_frame calls so Smithay relies on the frame_overdue check (which
+uses the throttle duration) rather than on_primary_scanout_output, which
+short-circuits the throttle entirely when it returns Some(output).
+
+Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
+---
+ src/niri.rs | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/niri.rs b/src/niri.rs
+index 0220a085..66564329 100644
+--- a/src/niri.rs
++++ b/src/niri.rs
+@@ -5078,7 +5078,7 @@ impl Niri {
+                             output,
+                             frame_callback_time,
+                             Some(throttle),
+-                            |_, _| Some(output.clone()),
++                            |_, _| None,
+                         );
+                     }
+                 }
 -- 
 2.52.0
 
