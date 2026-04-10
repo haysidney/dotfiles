@@ -420,7 +420,17 @@ window-rule {
 window-rule {
 	match app-id="ffxiv_dx11.exe"
 	open-maximized true
-	offscreen-frame-throttle-rate 30
+	offscreen-frame-throttle-rate 15
+}
+window-rule {
+	match app-id="steam_app_1808500"
+	open-maximized true
+	offscreen-frame-throttle-rate 15
+}
+window-rule {
+	match app-id="pioneergame.exe"
+	open-maximized true
+	offscreen-frame-throttle-rate 15
 }
 window-rule {
 	match app-id="steam_app_553850" title="HELLDIVERS 2"
