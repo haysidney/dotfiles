@@ -42,6 +42,8 @@ modmap:
         factorio, # Factorio
         gamescope, # Gamescope
         steam_app_3949040, # RV There Yet
+        steam_app_1808500, # Arc Raiders
+        pioneergame.exe, # Arc Raiders
       ]
 
 keymap:
