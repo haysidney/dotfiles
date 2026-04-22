@@ -31,7 +31,7 @@ GRUB_DISTRIBUTOR="Gentoo"
 # Append parameters to the linux kernel command line for non-recovery entries
 #GRUB_CMDLINE_LINUX_DEFAULT="quiet amdgpu.dpm=1 amdgpu.pcie_gen_cap=0x80000 amdgpu.ppfeaturemask=0xfff7ffff"
 #GRUB_CMDLINE_LINUX_DEFAULT="quiet amdgpu.dpm=1 amdgpu.pcie_gen_cap=0x80000 amdgpu.ppfeaturemask=0xfffd3fff"
-GRUB_CMDLINE_LINUX_DEFAULT="quiet amdgpu.dpm=1 amdgpu.pcie_gen_cap=0x80000 amdgpu.ppfeaturemask=0xfffd7fff vsyscall=emulate split_lock_detect=off clearcpuid=umip amdgpu.gfx_off=0 amdgpu.runpm=0 amdgpu_cwsr_enable=0"
+GRUB_CMDLINE_LINUX_DEFAULT="quiet amdgpu.dpm=1 amdgpu.pcie_gen_cap=0x80000 amdgpu.ppfeaturemask=0xfffd7fff vsyscall=emulate split_lock_detect=off clearcpuid=umip amdgpu.gfx_off=0 amdgpu.runpm=0 amdgpu_cwsr_enable=0 usbcore.autosuspend=-1"
 
 # Uncomment to disable graphical terminal (grub-pc only)
 #GRUB_TERMINAL=console
