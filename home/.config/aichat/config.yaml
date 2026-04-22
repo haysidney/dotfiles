@@ -4,14 +4,10 @@ clients:
 - type: openai-compatible
   name: lmstudio
   api_base: "http://localhost:11434/v1"
-  api_key: "sk-lm-9nmcT6X8:5eNCA8P2U2KvZ0ItubBF"
+#  api_key: "sk-lm-9nmcT6X8:5eNCA8P2U2KvZ0ItubBF"
   models:
-  - name: mistralai_mistral-small-3.2-24b-instruct-2506
-  - name: nvidia/nemotron-3-nano-4b
-  - name: text-embedding-qwen3-embedding-4b
-    type: embedding
+  - name: Qwen3-coder-30b-a3b-ud-q5kxl
+#  - name: text-embedding-qwen3-embedding-4b
+#    type: embedding
 #    default_chunk_size: 1000
 #    max_batch_size: 100
-#  - name: qwen3:8b
-#  - name: qwen3:14b
-#  - name: qwen3:30b
