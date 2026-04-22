@@ -36,6 +36,42 @@ function jaicasual {
   jai -j "$(basename $PWD)" -mcasual "$@"
 }
 
+localclaude() {
+  local haiku_model="Qwen2.5-coder-7b-q8"
+  local sonnet_model="Qwen3-coder-30b-a3b-ud-q3kxl"
+  local opus_model="Qwen3-coder-30b-a3b-ud-q5kxl"
+
+  if ! curl -sf http://127.0.0.1:11434/health | grep -q "ok"; then
+    echo "localclaude: llama-server not ready at 127.0.0.1:11434" >&2
+    return 1
+  fi
+
+  echo "Select model tier:"
+  echo "  1) haiku  — $haiku_model"
+  echo "  2) sonnet — $sonnet_model (default)"
+  echo "  3) opus   — $opus_model"
+  read -r -p "Choice [1-3, enter for sonnet]: " choice
+
+  local model
+  case "$choice" in
+    1) model="$haiku_model" ;;
+    3) model="$opus_model" ;;
+    *) model="$sonnet_model" ;;
+  esac
+
+  echo "localclaude: pinning all tiers to $model"
+
+  env -u ANTHROPIC_AUTH_TOKEN \
+    CLAUDE_CONFIG_DIR="$HOME/.claude-local" \
+    ANTHROPIC_BASE_URL="http://127.0.0.1:11434" \
+    ANTHROPIC_API_KEY="sk-local" \
+    ANTHROPIC_DEFAULT_HAIKU_MODEL="$model" \
+    ANTHROPIC_DEFAULT_SONNET_MODEL="$model" \
+    ANTHROPIC_DEFAULT_OPUS_MODEL="$model" \
+    CLAUDE_CODE_ATTRIBUTION_HEADER=0 \
+    claude "$@"
+}
+
 eval "$(thefuck --alias)"
 
 function y() {
