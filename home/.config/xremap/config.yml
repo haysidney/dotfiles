@@ -44,6 +44,7 @@ modmap:
         steam_app_3949040, # RV There Yet
         steam_app_1808500, # Arc Raiders
         pioneergame.exe, # Arc Raiders
+        steam_app_1604030, # V Rising
       ]
 
 keymap:
