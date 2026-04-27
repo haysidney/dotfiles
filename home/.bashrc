@@ -16,8 +16,6 @@ fi
 
 
 # Put your fun stuff here.
-if [ "$TERM" != "linux" ]; then eval "$(zellij setup --generate-auto-start bash)"; fi
-
 export EDITOR=/usr/bin/micro
 
 export HISTSIZE=10000
