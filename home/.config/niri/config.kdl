@@ -463,6 +463,10 @@ window-rule { // Thunar file rename dialog
 	match title="Rename \"*"
 	open-floating true
 }
+window-rule {
+	match app-id="org-prismlauncher-EntryPoint"
+	open-floating true
+}
 
 binds {
     // Keys consist of modifiers separated by + signs, followed by an XKB key name
